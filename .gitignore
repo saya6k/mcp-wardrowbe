@@ -20,3 +20,6 @@ notes/
 # Agent guidance — local only
 AGENTS.md
 CLAUDE.md
+
+# uv lockfile — library, not application; let consumers resolve their own deps
+uv.lock

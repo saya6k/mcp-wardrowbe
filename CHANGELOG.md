@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0] — 2026-05-27
+
+### Features
+
+- `--transport stdio` (or `MCP_TRANSPORT=stdio`) runs the server as a
+  stdio MCP child for bridges like `sparfenyuk/mcp-proxy` and the
+  `HASS-MCPProxy` add-on. Default remains `http` (no behaviour change for
+  existing deployments). In stdio mode, Starlette/uvicorn and the Bearer
+  middleware are skipped — the parent process owns the trust boundary —
+  but backend auth (`--auth dev|oidc`) still applies.
+- Logging now writes to stderr explicitly so stdout stays clean for the
+  JSON-RPC frame stream.
+
 ## [0.2.0] — 2026-05-25
 
 Initial standalone release, extracted from

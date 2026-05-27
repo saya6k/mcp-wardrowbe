@@ -1,16 +1,22 @@
-"""Entry point: build client + MCP server, expose SSE + Streamable HTTP on one port.
+"""Entry point: build client + MCP server, expose over HTTP or stdio.
 
-Auth modes:
+Transports:
+* ``--transport http`` (default) — Starlette app on one port serving
+  ``/mcp`` (Streamable HTTP) + ``/sse`` + ``/messages/``. Bearer auth via
+  ``--api-key`` gates every MCP route.
+* ``--transport stdio`` — FastMCP stdio loop for bridges that spawn MCP
+  servers as child processes (e.g. ``sparfenyuk/mcp-proxy``,
+  ``HASS-MCPProxy``). No HTTP server, no Bearer auth — the parent owns
+  the trust boundary. JSON-RPC frames go on stdout; keep all logging on
+  stderr (``logging.basicConfig`` default).
+
+Auth modes (apply to both transports — both still talk to the wardrowbe
+backend over HTTP):
 * ``--auth dev`` — dev_login sync with ``--external-id`` (default: wardrowbe-mcp).
   Requires the wardrowbe backend to be in dev mode (DEBUG=true + default
   SECRET_KEY).
 * ``--auth oidc`` — refresh-token flow against the configured OIDC issuer.
   Requires --oidc-issuer-url, --oidc-client-id, --oidc-refresh-token.
-
-Incoming MCP requests are authenticated via the ``Authorization: Bearer <key>``
-header against ``--api-key`` (required). The key is shared with the addon's
-00-init.sh which auto-generates one on first boot if the user didn't set
-``mcp_api_key``.
 """
 
 from __future__ import annotations
@@ -43,9 +49,17 @@ _PUBLIC_PATHS = frozenset({"/", "/health"})
 def _build_argparser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="wardrowbe-mcp")
     p.add_argument(
+        "--transport",
+        choices=("http", "stdio"),
+        default=os.environ.get("MCP_TRANSPORT", "http"),
+        help="Transport: http (Starlette + SSE/Streamable HTTP) or stdio "
+        "(for proxies like sparfenyuk/mcp-proxy and HASS-MCPProxy). "
+        "stdio mode ignores --host, --port, --api-key.",
+    )
+    p.add_argument(
         "--host",
         default=os.environ.get("MCP_BIND_HOST", "0.0.0.0"),
-        help="Address to bind (default: 0.0.0.0)",
+        help="Address to bind (default: 0.0.0.0). http transport only.",
     )
     p.add_argument(
         "--port",
@@ -150,7 +164,23 @@ async def _info(_request: Request) -> JSONResponse:
     )
 
 
-async def _serve(args: argparse.Namespace) -> None:
+async def _serve_stdio(args: argparse.Namespace) -> None:
+    """Run as a stdio MCP server.
+
+    Used by bridges that spawn MCP servers as subprocesses and read
+    JSON-RPC framing from their stdout (sparfenyuk/mcp-proxy, the
+    HASS-MCPProxy add-on, etc.). The parent process is the trust
+    boundary, so Bearer auth doesn't apply here — backend auth
+    (--auth dev|oidc) still does, since that's how we talk to wardrowbe.
+    """
+    async with aiohttp.ClientSession() as session:
+        token_provider = _build_token_provider(args, session)
+        client = WardrowbeClient(session, args.wardrowbe_url, token_provider)
+        mcp = build_mcp_server(client)
+        await mcp.run_stdio_async()
+
+
+async def _serve_http(args: argparse.Namespace) -> None:
     """Construct everything inside a running event loop, then serve via uvicorn.
 
     ``aiohttp.ClientSession()`` calls ``asyncio.get_running_loop()`` at
@@ -223,13 +253,22 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(
         level=getattr(logging, args.log_level),
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        stream=sys.stderr,
     )
-    _LOGGER.info(
-        "Starting wardrowbe-mcp on %s:%d (auth=%s, wardrowbe=%s)",
-        args.host, args.port, args.auth, args.wardrowbe_url,
-    )
+    if args.transport == "stdio":
+        _LOGGER.info(
+            "Starting wardrowbe-mcp on stdio (auth=%s, wardrowbe=%s)",
+            args.auth, args.wardrowbe_url,
+        )
+        serve = _serve_stdio
+    else:
+        _LOGGER.info(
+            "Starting wardrowbe-mcp on %s:%d (auth=%s, wardrowbe=%s)",
+            args.host, args.port, args.auth, args.wardrowbe_url,
+        )
+        serve = _serve_http
     try:
-        asyncio.run(_serve(args))
+        asyncio.run(serve(args))
     except KeyboardInterrupt:
         pass
     return 0
