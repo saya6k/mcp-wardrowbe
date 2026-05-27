@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+*.log
+.env
+.env.local
+
+# Decision logs / scratch — local only, referenced from AGENTS.md
+notes/
+
+# Agent guidance — local only
+AGENTS.md
+CLAUDE.md

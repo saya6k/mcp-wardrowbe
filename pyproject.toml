@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wardrowbe-mcp"
+version = "0.2.0"
+description = "MCP server exposing the Wardrowbe wardrobe API (Anyesh/wardrowbe) as tools over SSE and Streamable HTTP."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "saya6k" },
+]
+keywords = ["mcp", "wardrowbe", "wardrobe", "llm", "agent"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+  # Pin the Python MCP SDK to the current latest minor; the SSE + Streamable
+  # HTTP transports we use changed shape across early 1.x releases. Bump
+  # intentionally with a quick smoke test against /sse and /mcp.
+  "mcp>=1.27,<2",
+  "aiohttp>=3.9",
+  "uvicorn>=0.30",
+  "starlette>=0.37",
+  "pyjwt>=2.8",
+]
+
+[project.urls]
+Homepage = "https://github.com/saya6k/mcp-wardrowbe"
+Repository = "https://github.com/saya6k/mcp-wardrowbe"
+Issues = "https://github.com/saya6k/mcp-wardrowbe/issues"
+"Wardrowbe upstream" = "https://github.com/Anyesh/wardrowbe"
+
+[project.scripts]
+wardrowbe-mcp = "wardrowbe_mcp.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["wardrowbe_mcp*"]
+
+# Ship the agentskills.io-format skill bundle inside the package so the
+# MCP server can register each file as a `skill://wardrowbe-skill/<relpath>`
+# resource at runtime. Compatible MCP clients use this to auto-install
+# the skill without a separate config entry.
+[tool.setuptools.package-data]
+wardrowbe_mcp = ["skill/SKILL.md", "skill/README.md", "skill/**/*.md"]
