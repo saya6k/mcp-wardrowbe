@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from pydantic import BaseModel, Field
 from mcp.server.transport_security import TransportSecuritySettings
 
 from .client import WardrowbeApiError, WardrowbeClient
@@ -52,6 +53,16 @@ _OUTFIT_STATUSES = (
 _ACTIONABLE_STATUSES = {"pending", "sent", "viewed"}
 
 
+class WeatherOverride(BaseModel):
+    """Mirrors the backend's `WeatherOverrideRequest`."""
+
+    temperature: float = Field(description="Temperature in °C")
+    feels_like: float | None = Field(None, description="Feels-like temperature in °C")
+    condition: str | None = Field(None, description='e.g. "rain", "clear"')
+    precipitation_chance: int | None = Field(None, ge=0, le=100)
+    humidity: int | None = Field(None, ge=0, le=100)
+
+
 def build_mcp_server(client: WardrowbeClient, name: str = "wardrowbe") -> FastMCP:
     """Build a FastMCP server bound to ``client``.
 
@@ -63,8 +74,8 @@ def build_mcp_server(client: WardrowbeClient, name: str = "wardrowbe") -> FastMC
         name,
         instructions=(
             "Tools for the user's Wardrowbe wardrobe. Prefer `suggest_outfit` "
-            "when the user asks what to wear (occasion / time_of_day / notes "
-            "are optional hints). Use `get_latest_outfit` to recall the most "
+            "when the user asks what to wear (occasion / time_of_day / "
+            "weather_override / include_items / exclude_items are optional hints). Use `get_latest_outfit` to recall the most "
             "recent suggestion; `get_recent_outfits` to list as a gallery. "
             "Use `accept_latest_outfit` / `reject_latest_outfit` / "
             "`skip_latest_outfit` to act on a pending suggestion. Use "
@@ -183,7 +194,7 @@ def build_mcp_server(client: WardrowbeClient, name: str = "wardrowbe") -> FastMC
     async def suggest_outfit(
         occasion: str | None = None,
         time_of_day: str | None = None,
-        weather_override: dict[str, Any] | None = None,
+        weather_override: WeatherOverride | None = None,
         include_items: list[str] | None = None,
         exclude_items: list[str] | None = None,
     ) -> dict[str, Any]:
@@ -192,9 +203,7 @@ def build_mcp_server(client: WardrowbeClient, name: str = "wardrowbe") -> FastMC
           interview/lounge/office/outdoor/party/running/smart-casual/sport/sporty/travel/
           wedding/weekend/work
         - time_of_day: morning/afternoon/evening/night/full day
-        - weather_override: use this weather instead of the live forecast.
-          {"temperature": °C (required), "feels_like": °C, "condition": str,
-          "precipitation_chance": 0–100, "humidity": 0–100}
+        - weather_override: use this weather instead of the live forecast
         - include_items: item ids the outfit must contain
         - exclude_items: item ids the outfit must not contain
         """
@@ -206,7 +215,12 @@ def build_mcp_server(client: WardrowbeClient, name: str = "wardrowbe") -> FastMC
         for k, v in (
             ("occasion", occasion),
             ("time_of_day", time_of_day),
-            ("weather_override", weather_override),
+            (
+                "weather_override",
+                weather_override.model_dump(exclude_none=True)
+                if weather_override is not None
+                else None,
+            ),
             ("include_items", include_items),
             ("exclude_items", exclude_items),
         ):

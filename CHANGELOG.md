@@ -17,6 +17,10 @@ Request fields realigned with the wardrowbe 1.14.0 backend, which silently dropp
 
 - `suggest_outfit`: removed `target_date` and `notes` (the backend has no such fields). Added `weather_override`, `include_items`, `exclude_items`.
 
+### Development
+
+- `tests/test_payloads.py` pins the request field names against a stub backend. Run with `uv run pytest`.
+
 ## [0.3.0] — 2026-05-27
 
 ### Features
