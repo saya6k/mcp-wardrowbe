@@ -10,6 +10,15 @@ acceptance flow, analytics, and notifications. Tool surface mirrors
 `hacs-wardrowbe`'s LLM API one-for-one, plus three read-only helpers
 (`list_items`, `get_item`, `get_outfit`).
 
+## Compatibility
+
+| wardrowbe-mcp | Wardrowbe backend |
+| --- | --- |
+| 0.4.0 | 1.14.0 (tested) |
+| 0.3.0 and earlier | Not compatible with 1.14.0: several tool arguments are ignored |
+
+Other backend versions may work, but they are not tested. The backend ignores request fields it doesn't know, so a version mismatch shows up as a tool argument that silently has no effect, not as an error.
+
 ## Install
 
 ```bash
@@ -185,6 +194,8 @@ cd mcp-wardrowbe
 pip install -e .
 wardrowbe-mcp --help
 ```
+
+Run the tests with `uv run pytest`.
 
 Smoke test against a running instance:
 
