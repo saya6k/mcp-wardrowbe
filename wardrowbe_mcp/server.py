@@ -46,8 +46,10 @@ _VALID_OCCASIONS = (
     "wedding", "weekend", "work",
 )
 _VALID_TIME_OF_DAY = ("morning", "afternoon", "evening", "night", "full day")
-_OUTFIT_STATUSES = ("pending", "sent", "accepted", "rejected", "skipped")
-_ACTIONABLE_STATUSES = {"pending", "sent"}
+_OUTFIT_STATUSES = (
+    "pending", "sent", "viewed", "accepted", "rejected", "skipped", "expired",
+)
+_ACTIONABLE_STATUSES = {"pending", "sent", "viewed"}
 
 
 def build_mcp_server(client: WardrowbeClient, name: str = "wardrowbe") -> FastMCP:
@@ -128,7 +130,7 @@ def build_mcp_server(client: WardrowbeClient, name: str = "wardrowbe") -> FastMC
         needs_wash: bool | None = None,
         search: str | None = None,
     ) -> dict[str, Any]:
-        """Paginated item search. Filters: category, is_archived, needs_wash, search (name substring)."""
+        """Paginated item search. Filters: category (item type, e.g. "shirt"), is_archived, needs_wash, search (name substring)."""
         return await _wrap(
             client.async_list_items(
                 page=page,
@@ -157,7 +159,7 @@ def build_mcp_server(client: WardrowbeClient, name: str = "wardrowbe") -> FastMC
         """Log a wear for ``item_id``. ``date`` is optional YYYY-MM-DD; defaults to today."""
         payload: dict[str, Any] = {}
         if date:
-            payload["date"] = date
+            payload["worn_at"] = date
         return await _wrap(client.async_log_wear(item_id, payload))
 
     @mcp.tool()
@@ -181,16 +183,20 @@ def build_mcp_server(client: WardrowbeClient, name: str = "wardrowbe") -> FastMC
     async def suggest_outfit(
         occasion: str | None = None,
         time_of_day: str | None = None,
-        target_date: str | None = None,
-        notes: str | None = None,
+        weather_override: dict[str, Any] | None = None,
+        include_items: list[str] | None = None,
+        exclude_items: list[str] | None = None,
     ) -> dict[str, Any]:
         """Generate a new outfit. Optional hints:
         - occasion: one of beach/brunch/business-casual/casual/date/dinner/formal/gym/hiking/
           interview/lounge/office/outdoor/party/running/smart-casual/sport/sporty/travel/
           wedding/weekend/work
         - time_of_day: morning/afternoon/evening/night/full day
-        - target_date: YYYY-MM-DD
-        - notes: free-form context (e.g., "warm layers", "no white")
+        - weather_override: use this weather instead of the live forecast.
+          {"temperature": °C (required), "feels_like": °C, "condition": str,
+          "precipitation_chance": 0–100, "humidity": 0–100}
+        - include_items: item ids the outfit must contain
+        - exclude_items: item ids the outfit must not contain
         """
         if occasion is not None and occasion not in _VALID_OCCASIONS:
             raise ValueError(f"occasion must be one of {_VALID_OCCASIONS}")
@@ -200,8 +206,9 @@ def build_mcp_server(client: WardrowbeClient, name: str = "wardrowbe") -> FastMC
         for k, v in (
             ("occasion", occasion),
             ("time_of_day", time_of_day),
-            ("target_date", target_date),
-            ("notes", notes),
+            ("weather_override", weather_override),
+            ("include_items", include_items),
+            ("exclude_items", exclude_items),
         ):
             if v is not None:
                 payload[k] = v
@@ -224,14 +231,12 @@ def build_mcp_server(client: WardrowbeClient, name: str = "wardrowbe") -> FastMC
         status: str | None = None,
     ) -> dict[str, Any]:
         """List recent outfits. ``limit`` 1–20. Optional ``status`` filter:
-        pending/sent/accepted/rejected/skipped.
+        pending/sent/viewed/accepted/rejected/skipped/expired.
         """
         limit = max(1, min(int(limit), 20))
         if status is not None and status not in _OUTFIT_STATUSES:
             raise ValueError(f"status must be one of {_OUTFIT_STATUSES}")
-        outfits = await _wrap(client.async_recent_outfits(limit=limit))
-        if status is not None:
-            outfits = [o for o in outfits if o.get("status") == status]
+        outfits = await _wrap(client.async_recent_outfits(limit=limit, status=status))
         return {"count": len(outfits), "outfits": outfits}
 
     async def _act_on_latest(action: str) -> dict[str, Any]:
@@ -244,24 +249,24 @@ def build_mcp_server(client: WardrowbeClient, name: str = "wardrowbe") -> FastMC
             None,
         )
         if target is None:
-            return {"error": "No actionable (pending/sent) outfit found."}
+            return {"error": "No actionable (pending/sent/viewed) outfit found."}
         outfit_id = str(target["id"])
         await _wrap(client.async_outfit_action(outfit_id, action))
         return {"action": action, "outfit_id": outfit_id, "outfit": target}
 
     @mcp.tool()
     async def accept_latest_outfit() -> dict[str, Any]:
-        """Accept the most recent pending/sent outfit suggestion."""
+        """Accept the most recent pending/sent/viewed outfit suggestion."""
         return await _act_on_latest("accept")
 
     @mcp.tool()
     async def reject_latest_outfit() -> dict[str, Any]:
-        """Reject the most recent pending/sent outfit suggestion."""
+        """Reject the most recent pending/sent/viewed outfit suggestion."""
         return await _act_on_latest("reject")
 
     @mcp.tool()
     async def skip_latest_outfit() -> dict[str, Any]:
-        """Skip the most recent pending/sent outfit suggestion."""
+        """Skip the most recent pending/sent/viewed outfit suggestion."""
         return await _act_on_latest("skip")
 
     @mcp.tool()
@@ -271,12 +276,12 @@ def build_mcp_server(client: WardrowbeClient, name: str = "wardrowbe") -> FastMC
         wore: bool | None = None,
         notes: str | None = None,
     ) -> dict[str, Any]:
-        """Submit feedback on an outfit. ``rating`` 1–5, ``wore`` boolean, ``notes`` free-form."""
+        """Submit feedback on an outfit. ``rating`` 1–5, ``wore`` boolean (true also logs a wear for every item), ``notes`` free-form."""
         if rating is not None and not 1 <= int(rating) <= 5:
             raise ValueError("rating must be 1–5")
         payload = {
             k: v for k, v in (
-                ("rating", rating), ("wore", wore), ("notes", notes),
+                ("rating", rating), ("worn", wore), ("comment", notes),
             ) if v is not None
         }
         return await _wrap(client.async_post_outfit_feedback(outfit_id, payload))
