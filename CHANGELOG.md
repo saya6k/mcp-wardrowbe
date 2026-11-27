@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.4.0] — 2026-11-27
 
 ### Fixes
 
@@ -12,6 +12,10 @@ Request fields realigned with the wardrowbe 1.14.0 backend, which silently dropp
 - `get_recent_outfits` / `get_latest_outfit`: send `page_size` instead of `limit` and filter `status` on the backend.
 - `health` probes `/api/v1/health` instead of `/health`.
 - Outfit statuses `viewed` and `expired` are accepted; `viewed` outfits can be accepted / rejected / skipped.
+
+### Compatibility
+
+- Tested against Wardrowbe 1.14.0. README has a compatibility table.
 
 ### Breaking
 
