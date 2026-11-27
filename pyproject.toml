@@ -35,6 +35,9 @@ dependencies = [
   "pyjwt>=2.8",
 ]
 
+[dependency-groups]
+dev = ["pytest>=8"]
+
 [project.urls]
 Homepage = "https://github.com/saya6k/mcp-wardrowbe"
 Repository = "https://github.com/saya6k/mcp-wardrowbe"
