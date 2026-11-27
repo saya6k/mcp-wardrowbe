@@ -21,15 +21,19 @@ Other backend versions may work, but they are not tested. The backend ignores re
 
 ## Install
 
-```bash
-pip install wardrowbe-mcp
-```
-
-Or from source:
+Not published on PyPI. Install from a tagged release on GitHub:
 
 ```bash
-pip install git+https://github.com/saya6k/mcp-wardrowbe
+pip install git+https://github.com/saya6k/mcp-wardrowbe@v0.4.0
 ```
+
+Or run it without installing:
+
+```bash
+uvx --from git+https://github.com/saya6k/mcp-wardrowbe@v0.4.0 wardrowbe-mcp --help
+```
+
+The wheel and sdist are also attached to each [GitHub release](https://github.com/saya6k/mcp-wardrowbe/releases).
 
 ## Run
 
