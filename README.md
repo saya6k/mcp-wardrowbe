@@ -1,5 +1,12 @@
 # wardrowbe-mcp
 
+[![Built with Claude Code](https://img.shields.io/badge/Built%20with%20Claude%20Code-D97757?style=for-the-badge&logo=claude&logoColor=white)](https://claude.ai/code)
+[![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-000000?style=for-the-badge&logo=anthropic&logoColor=white)](https://modelcontextprotocol.io/)
+[![Release](https://img.shields.io/github/v/release/saya6k/mcp-wardrowbe?style=for-the-badge&logo=github&logoColor=white)](https://github.com/saya6k/mcp-wardrowbe/releases)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/saya6k)
+
 MCP (Model Context Protocol) server exposing the [Wardrowbe](https://github.com/Anyesh/wardrowbe)
 wardrobe API as tools an LLM can call. Works against any Wardrowbe instance —
 self-hosted (e.g., behind a reverse proxy or the `ha-wardrowbe` Home Assistant
