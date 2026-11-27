@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixes
+
+Request fields realigned with the wardrowbe 1.14.0 backend, which silently dropped the old names:
+
+- `log_wear`: `date` is now sent as `worn_at` (was always logged as today).
+- `list_items`: `category` is now sent as `type` (filter was ignored).
+- `submit_outfit_feedback`: `wore` → `worn`, `notes` → `comment`.
+- `get_recent_outfits` / `get_latest_outfit`: send `page_size` instead of `limit` and filter `status` on the backend.
+- `health` probes `/api/v1/health` instead of `/health`.
+- Outfit statuses `viewed` and `expired` are accepted; `viewed` outfits can be accepted / rejected / skipped.
+
+### Breaking
+
+- `suggest_outfit`: removed `target_date` and `notes` (the backend has no such fields). Added `weather_override`, `include_items`, `exclude_items`.
+
 ## [0.3.0] — 2026-05-27
 
 ### Features

@@ -55,7 +55,7 @@ class WardrowbeClient:
     async def async_health(self) -> bool:
         try:
             async with self._session.get(
-                self._url("/health"),
+                self._url(f"{_API_BASE}/health"),
                 ssl=self._verify_ssl,
                 timeout=aiohttp.ClientTimeout(total=_DEFAULT_TIMEOUT),
             ) as resp:
@@ -83,10 +83,13 @@ class WardrowbeClient:
             _resolve_image_urls(data, self._host)
         return data
 
-    async def async_recent_outfits(self, limit: int = 20) -> list[dict[str, Any]]:
-        data = await self._request(
-            "GET", f"{_API_BASE}/outfits", params={"limit": limit}
-        )
+    async def async_recent_outfits(
+        self, limit: int = 20, status: str | None = None
+    ) -> list[dict[str, Any]]:
+        params: dict[str, Any] = {"page_size": limit}
+        if status is not None:
+            params["status"] = status
+        data = await self._request("GET", f"{_API_BASE}/outfits", params=params)
         outfits = _coerce_list(data)
         _resolve_image_urls(outfits, self._host)
         return outfits
@@ -129,7 +132,7 @@ class WardrowbeClient:
     ) -> dict[str, Any]:
         params: dict[str, Any] = {"page": page, "page_size": page_size}
         if category is not None:
-            params["category"] = category
+            params["type"] = category
         if is_archived is not None:
             params["is_archived"] = "true" if is_archived else "false"
         if needs_wash is not None:
